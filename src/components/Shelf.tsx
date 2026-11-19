@@ -5,13 +5,12 @@ import './Shelf.css'
 
 interface ShelfProps {
   title: string
-  subtitle?: string
   count?: number
   emptyMessage?: string
   children: ReactNode
 }
 
-export function Shelf({ title, subtitle, count, emptyMessage, children }: ShelfProps) {
+export function Shelf({ title, count, emptyMessage, children }: ShelfProps) {
   const trackRef = useRef<HTMLDivElement>(null)
   const [edges, setEdges] = useState({ start: true, end: true })
 
@@ -67,7 +66,6 @@ export function Shelf({ title, subtitle, count, emptyMessage, children }: ShelfP
     <section className="shelf">
       <header className="shelf__head">
         <h2 className="shelf__title">{title}</h2>
-        {subtitle ? <span className="shelf__sub">{subtitle}</span> : null}
         {scrollable ? (
           <div className="shelf__arrows">
             <button

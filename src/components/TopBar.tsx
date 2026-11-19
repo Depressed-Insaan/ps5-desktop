@@ -35,7 +35,7 @@ export function TopBar() {
           type="button"
           className="topbar__icon"
           aria-label="Search library"
-          title="Library search arrives in Phase 3"
+          title="Search"
         >
           <SearchIcon size={18} />
         </button>

@@ -9,7 +9,6 @@ import type { Game, Profile } from '@/types'
 export interface LibraryShelf {
   id: string
   title: string
-  subtitle: string
   games: Game[]
 }
 
@@ -20,19 +19,9 @@ export const allGames: Game[] = GAMES
 export const featuredGame: Game = GAMES[0]
 
 export const shelves: LibraryShelf[] = [
-  {
-    id: 'continue',
-    title: 'Continue playing',
-    subtitle: `${continuePlaying.length} recently played`,
-    games: continuePlaying,
-  },
-  { id: 'favourites', title: 'Favourites', subtitle: 'Your shelf', games: favourites },
-  {
-    id: 'library',
-    title: 'Your library',
-    subtitle: `${GAMES.length} games · Phase 3 adds importing`,
-    games: GAMES,
-  },
+  { id: 'continue', title: 'Continue playing', games: continuePlaying },
+  { id: 'favourites', title: 'Favourites', games: favourites },
+  { id: 'library', title: 'Your library', games: GAMES },
 ]
 
 export const libraryProfile: Profile = profile

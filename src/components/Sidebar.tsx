@@ -28,10 +28,7 @@ export function Sidebar({ view, onNavigate, appInfo }: SidebarProps) {
         <span className="rail__mark" aria-hidden="true">
           A
         </span>
-        <span className="rail__wordmark">
-          Ani Games
-          <small>gaming environment</small>
-        </span>
+        <span className="rail__wordmark">Ani Games</span>
       </div>
 
       <nav className="rail__nav" aria-label="Main">

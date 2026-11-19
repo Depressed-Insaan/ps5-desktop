@@ -90,7 +90,7 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
               type="button"
               className="btn-primary"
               onClick={() =>
-                notify(`Launching “${selected.title}” arrives with the library in Phase 3.`)
+                notify(`Launching “${selected.title}” is not available yet.`)
               }
             >
               <PlayIcon size={16} />
@@ -99,7 +99,7 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
             <button
               type="button"
               className="btn-ghost"
-              onClick={() => notify('Game details arrive with the library in Phase 3.')}
+              onClick={() => notify('Game details are not available yet.')}
             >
               Game details
             </button>
@@ -112,9 +112,8 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
           <Shelf
             key={shelf.id}
             title={shelf.title}
-            subtitle={shelf.subtitle}
             count={shelf.games.length}
-            emptyMessage="Nothing here yet — importing your games arrives in Phase 3."
+            emptyMessage="No games here yet."
           >
             {shelf.games.map((game) => (
               <GameTile
@@ -134,7 +133,6 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 <LibraryIcon size={16} />
               </span>
               <h3>Library</h3>
-              <span className="card__tag">Sample</span>
             </div>
             <div className="card__stats">
               <div>
@@ -150,7 +148,6 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 <span>profile</span>
               </div>
             </div>
-            <p className="card__note">Real imports, launch paths and playtime arrive in Phase 3.</p>
           </article>
 
           <article className="card">
@@ -159,7 +156,6 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 <StorageIcon size={16} />
               </span>
               <h3>Console storage</h3>
-              <span className="card__tag">Preview</span>
             </div>
             <div className="storage">
               <div className="storage__bar">
@@ -183,7 +179,6 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 </span>
               </div>
             </div>
-            <p className="card__note">Static preview — drive scanning arrives in Phase 3.</p>
           </article>
 
           <article className="card">
@@ -192,7 +187,6 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 <span className={appInfo ? 'bridge is-live' : 'bridge'} aria-hidden="true" />
               </span>
               <h3>System</h3>
-              <span className="card__tag">{appInfo ? 'Connected' : 'Browser preview'}</span>
             </div>
             <dl className="card__rows">
               <div>
@@ -208,15 +202,8 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 <dd>{appInfo?.version ?? '—'}</dd>
               </div>
             </dl>
-            <p className="card__note">
-              These values are returned by the Electron main process over the preload bridge.
-            </p>
           </article>
         </div>
-
-        <p className="home__footnote">
-          Ani Games · arrow keys move between tiles · artwork and play data are sample content.
-        </p>
       </div>
 
       {toast ? (
