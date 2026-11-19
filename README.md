@@ -1,30 +1,52 @@
-# React + TypeScript + Vite
+# Ani Games
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A PS5-inspired gaming environment for Windows: a full-screen, cinematic dashboard
+built with Electron, React, TypeScript and Vite.
 
-Currently, two official plugins are available:
+## Status
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Phase 1 and Phase 2 are complete. The interface, navigation and dashboard
+interactions are real; the games shown are sample content until the library
+import work in Phase 3.
 
-## Expanding the ESLint configuration
+## Requirements
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- Windows 10 or 11
+- Node.js 20 or newer
 
-- Configure the top-level `parserOptions` property like this:
+## Commands
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+```bash
+npm install      # install dependencies
+npm run dev      # run the app with hot reload
+npm run build    # type-check, bundle and build the Windows installer
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+The installer is written to `release/<version>/`. `npm run build` also runs
+`electron-builder`, which downloads packaging tools the first time it runs;
+use `npx vite build` if you only want to check the bundle.
+
+## Layout
+
+```
+electron/        main process (window shell, IPC, preload bridge)
+src/
+  components/    rail, top bar, shelves, tiles, icons
+  screens/       dashboard and placeholder views
+  data/          sample library data and the dashboard data boundary
+  hooks/         dashboard keyboard navigation
+  assets/        generated artwork
+```
+
+## Keyboard
+
+Arrow keys move between tiles and shelves, `Home`/`End` jump to the ends of a
+row, and `Enter` selects the focused game. The navigation model is deliberately
+data-driven so a gamepad can drive it in a later phase.
+
+## Known gaps
+
+- Library, Trophies and Settings are placeholders.
+- Artwork and play data are sample content.
+- The Electron and Vite versions tracked by the template are older than the
+  current releases; upgrading is a separate, deliberate change.

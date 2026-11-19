@@ -2,7 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { GameTile } from '@/components/GameTile'
 import { Shelf } from '@/components/Shelf'
 import { ClockIcon, LibraryIcon, PlayIcon, StorageIcon } from '@/components/Icons'
-import { GAMES, continuePlaying, favourites, profile } from '@/data/mockGames'
+import { useDashboardNav } from '@/hooks/useDashboardNav'
+import {
+  allGames,
+  featuredGame,
+  findGame,
+  libraryProfile,
+  libraryStats,
+  shelves,
+} from '@/data/library'
 import type { AppInfo } from '@/types'
 import './HomeScreen.css'
 
@@ -20,26 +28,14 @@ const STORAGE = {
   ],
 }
 
-const SHELVES = [
-  {
-    title: 'Continue playing',
-    subtitle: `${continuePlaying.length} recently played`,
-    games: continuePlaying,
-  },
-  { title: 'Favourites', subtitle: 'Your shelf', games: favourites },
-  {
-    title: 'Your library',
-    subtitle: `${GAMES.length} games · Phase 3 adds importing`,
-    games: GAMES,
-  },
-]
-
 export function HomeScreen({ appInfo }: HomeScreenProps) {
-  const [selectedId, setSelectedId] = useState(GAMES[0].id)
+  const [selectedId, setSelectedId] = useState(featuredGame.id)
   const [toast, setToast] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onGridKeyDown = useDashboardNav()
 
-  const selected = GAMES.find((game) => game.id === selectedId) ?? GAMES[0]
+  const selected = findGame(selectedId) ?? featuredGame
+  const isFeatured = selected.id === featuredGame.id
 
   useEffect(() => {
     return () => {
@@ -56,7 +52,7 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
   return (
     <div className="home">
       <div className="ambient" aria-hidden="true">
-        {GAMES.map((game) => (
+        {allGames.map((game) => (
           <div
             key={game.id}
             className={[
@@ -78,6 +74,7 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
           <p className="hero__eyebrow">
             <span className="hero__pulse" aria-hidden="true" />
             {selected.installed ? 'Ready to play' : 'Not installed'} · {selected.genre}
+            {isFeatured ? <span className="hero__badge">Featured</span> : null}
           </p>
           <h2 className="hero__title">{selected.title}</h2>
           <p className="hero__tagline">{selected.tagline}</p>
@@ -110,9 +107,15 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
         </div>
       </section>
 
-      <div className="home__content">
-        {SHELVES.map((shelf) => (
-          <Shelf key={shelf.title} title={shelf.title} subtitle={shelf.subtitle}>
+      <div className="home__content" onKeyDown={onGridKeyDown}>
+        {shelves.map((shelf) => (
+          <Shelf
+            key={shelf.id}
+            title={shelf.title}
+            subtitle={shelf.subtitle}
+            count={shelf.games.length}
+            emptyMessage="Nothing here yet — importing your games arrives in Phase 3."
+          >
             {shelf.games.map((game) => (
               <GameTile
                 key={game.id}
@@ -135,15 +138,15 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
             </div>
             <div className="card__stats">
               <div>
-                <strong>{GAMES.filter((game) => game.installed).length}</strong>
+                <strong>{libraryStats.installed}</strong>
                 <span>installed</span>
               </div>
               <div>
-                <strong>{favourites.length}</strong>
+                <strong>{libraryStats.favourites}</strong>
                 <span>favourites</span>
               </div>
               <div>
-                <strong>Lv {profile.level}</strong>
+                <strong>Lv {libraryProfile.level}</strong>
                 <span>profile</span>
               </div>
             </div>
@@ -180,7 +183,7 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
                 </span>
               </div>
             </div>
-            <p className="card__note">Static preview — drive scanning is not part of Phase 1.</p>
+            <p className="card__note">Static preview — drive scanning arrives in Phase 3.</p>
           </article>
 
           <article className="card">
@@ -212,7 +215,7 @@ export function HomeScreen({ appInfo }: HomeScreenProps) {
         </div>
 
         <p className="home__footnote">
-          Phase 1 foundation · artwork and play data are sample content, not your real library.
+          Ani Games · arrow keys move between tiles · artwork and play data are sample content.
         </p>
       </div>
 

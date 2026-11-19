@@ -76,6 +76,16 @@
   color: rgba(233, 240, 255, 0.72);
 }
 
+.hero__badge {
+  padding: 3px 9px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #cfe4ff;
+  border: 1px solid rgba(140, 190, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(90, 169, 255, 0.14);
+}
+
 .hero__pulse {
   width: 7px;
   height: 7px;

@@ -42,7 +42,7 @@ function createWindow() {
     show: false,
     backgroundColor: '#05060a',
     autoHideMenuBar: true,
-    title: 'Aurora',
+    title: 'Ani Games',
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       contextIsolation: true,

@@ -29,7 +29,7 @@ export function Sidebar({ view, onNavigate, appInfo }: SidebarProps) {
           A
         </span>
         <span className="rail__wordmark">
-          Aurora
+          Ani Games
           <small>gaming environment</small>
         </span>
       </div>

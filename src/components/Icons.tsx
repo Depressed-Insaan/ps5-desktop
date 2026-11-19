@@ -64,6 +64,22 @@ export function SettingsIcon({ size = 20 }: IconProps) {
   )
 }
 
+export function ChevronLeftIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="m14.5 5.5-6.5 6.5 6.5 6.5" />
+    </svg>
+  )
+}
+
+export function ChevronRightIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </svg>
+  )
+}
+
 export function PlayIcon({ size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

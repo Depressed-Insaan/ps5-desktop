@@ -23,6 +23,35 @@
   color: var(--text-faint);
 }
 
+.shelf__arrows {
+  display: flex;
+  align-self: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.shelf__arrow {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: var(--text-dim);
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  transition: color 0.22s var(--ease), background 0.22s var(--ease), opacity 0.22s var(--ease);
+}
+
+.shelf__arrow:hover:not(:disabled) {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.shelf__arrow:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
 .shelf__track {
   display: grid;
   grid-auto-flow: column;
@@ -33,10 +62,40 @@
   overflow-y: hidden;
   scroll-snap-type: x proximity;
   scrollbar-width: none;
+  transition: mask-image 0.25s var(--ease);
 }
 
 .shelf__track::-webkit-scrollbar {
   display: none;
+}
+
+/* Fade the tiles that flow off each scrollable edge. */
+.shelf__track.is-faded-start {
+  mask-image: linear-gradient(90deg, transparent 0, #000 42px);
+}
+
+.shelf__track.is-faded-end {
+  mask-image: linear-gradient(90deg, #000 calc(100% - 42px), transparent 100%);
+}
+
+.shelf__track.is-faded-start.is-faded-end {
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 42px,
+    #000 calc(100% - 42px),
+    transparent 100%
+  );
+}
+
+.shelf__empty {
+  margin: 0;
+  padding: 30px 20px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-faint);
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius-lg);
 }
 
 @media (max-width: 720px) {
