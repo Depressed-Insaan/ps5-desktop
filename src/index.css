@@ -1,0 +1,98 @@
+:root {
+  color-scheme: dark;
+
+  /* Palette */
+  --ink-0: #05060a;
+  --ink-2: #11141d;
+  --text: #f3f6fc;
+  --text-dim: rgba(232, 239, 252, 0.66);
+  --text-faint: rgba(232, 239, 252, 0.4);
+  --accent: #5aa9ff;
+  --mint: #4fe0c4;
+  --hairline: rgba(255, 255, 255, 0.09);
+
+  /* Shape and motion */
+  --radius-xl: 26px;
+  --radius-lg: 20px;
+  --radius-md: 15px;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-lg: 0 30px 70px rgba(0, 0, 0, 0.55);
+
+  /* Layout */
+  --rail-w: 88px;
+  --rail-w-open: 236px;
+  --topbar-h: 92px;
+  --gutter: clamp(24px, 4vw, 76px);
+
+  font-family: 'Segoe UI Variable Display', 'Segoe UI', Inter, system-ui, -apple-system, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--ink-0);
+}
+
+button {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+img {
+  display: block;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(90, 169, 255, 0.35);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.24);
+  background-clip: content-box;
+}

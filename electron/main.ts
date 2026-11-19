@@ -1,0 +1,85 @@
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// The built directory structure
+//
+// ├─┬─┬ dist
+// │ │ └── index.html
+// │ │
+// │ ├─┬ dist-electron
+// │ │ ├── main.js
+// │ │ └── preload.mjs
+// │
+process.env.APP_ROOT = path.join(__dirname, '..')
+
+// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
+export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
+export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
+
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
+  ? path.join(process.env.APP_ROOT, 'public')
+  : RENDERER_DIST
+
+// Read-only facts about the app, consumed by the dashboard status card.
+ipcMain.handle('app:info', () => ({
+  version: app.getVersion(),
+  electron: process.versions.electron,
+  chrome: process.versions.chrome,
+  platform: process.platform,
+}))
+
+let win: BrowserWindow | null = null
+
+function createWindow() {
+  win = new BrowserWindow({
+    width: 1600,
+    height: 900,
+    minWidth: 1140,
+    minHeight: 700,
+    show: false,
+    backgroundColor: '#05060a',
+    autoHideMenuBar: true,
+    title: 'Aurora',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  })
+
+  win.setMenuBarVisibility(false)
+
+  // Avoid a white flash: the dashboard only appears once it has rendered.
+  win.once('ready-to-show', () => win?.show())
+
+  // External links open in the user's browser, never inside the app.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url)
+    return { action: 'deny' }
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL)
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, 'index.html'))
+  }
+}
+
+// Quit when all windows are closed, except on macOS.
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit()
+    win = null
+  }
+})
+
+app.on('activate', () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow()
+  }
+})
+
+app.whenReady().then(createWindow)

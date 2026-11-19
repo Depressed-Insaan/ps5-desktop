@@ -1,0 +1,89 @@
+.topbar {
+  position: relative;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex: none;
+  height: var(--topbar-h);
+  padding: 0 var(--gutter);
+  background: linear-gradient(180deg, rgba(5, 6, 10, 0.55), rgba(5, 6, 10, 0));
+}
+
+.topbar__eyebrow {
+  margin: 0 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.topbar__title {
+  margin: 0;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar__icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  color: var(--text-dim);
+  border: 1px solid var(--hairline);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(14px);
+  transition: color 0.22s var(--ease), background 0.22s var(--ease), transform 0.22s var(--ease);
+}
+
+.topbar__icon:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.topbar__clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.topbar__clock span {
+  font-size: 19px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.topbar__clock small {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.topbar__avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #041220;
+  border-radius: 50%;
+  background: linear-gradient(140deg, #cfe8ff, #7fb9ff 55%, #9b8cff);
+  box-shadow: 0 8px 22px rgba(70, 140, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
