@@ -16,6 +16,18 @@ export interface SeedGame {
   playedAgoHours: number
 }
 
+/** A small trophy set so a fresh install has something to show. */
+export interface SeedTrophy {
+  id: string
+  gameId: string
+  title: string
+  description: string
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum'
+  target: number
+  progress: number
+  unlockedDaysAgo: number | null
+}
+
 export const SEED_GAMES: SeedGame[] = [
   {
     id: 'stellar-rift',
@@ -96,5 +108,108 @@ export const SEED_GAMES: SeedGame[] = [
     artworkKey: 'gridline-26',
     playtimeHours: 18,
     playedAgoHours: 840,
+  },
+]
+
+export const SEED_TROPHIES: SeedTrophy[] = [
+  {
+    id: 'stellar-first-light',
+    gameId: 'stellar-rift',
+    title: 'First Light',
+    description: 'Leave the orbital docks and set a course for the nebula.',
+    tier: 'bronze',
+    target: 1,
+    progress: 1,
+    unlockedDaysAgo: 20,
+  },
+  {
+    id: 'stellar-cartographer',
+    gameId: 'stellar-rift',
+    title: 'Nebula Cartographer',
+    description: 'Chart twelve uncharted systems.',
+    tier: 'silver',
+    target: 12,
+    progress: 7,
+    unlockedDaysAgo: null,
+  },
+  {
+    id: 'stellar-riftwalker',
+    gameId: 'stellar-rift',
+    title: 'Riftwalker',
+    description: 'Survive twenty-five jumps through the rift.',
+    tier: 'gold',
+    target: 25,
+    progress: 25,
+    unlockedDaysAgo: 7,
+  },
+  {
+    id: 'stellar-master',
+    gameId: 'stellar-rift',
+    title: 'Stellar Rift Master',
+    description: 'Earn every other trophy in Stellar Rift.',
+    tier: 'platinum',
+    target: 1,
+    progress: 0,
+    unlockedDaysAgo: null,
+  },
+  {
+    id: 'ironveil-first-blood',
+    gameId: 'ironveil',
+    title: 'First Blood',
+    description: 'Win your first duel on the burning road.',
+    tier: 'bronze',
+    target: 1,
+    progress: 1,
+    unlockedDaysAgo: 30,
+  },
+  {
+    id: 'ironveil-oathbreaker',
+    gameId: 'ironveil',
+    title: 'Oathbreaker',
+    description: 'Break eight sworn oaths.',
+    tier: 'silver',
+    target: 8,
+    progress: 3,
+    unlockedDaysAgo: null,
+  },
+  {
+    id: 'velocity-perfect-line',
+    gameId: 'velocity-nine',
+    title: 'Perfect Line',
+    description: 'Win all nine district races without a crash.',
+    tier: 'gold',
+    target: 9,
+    progress: 9,
+    unlockedDaysAgo: 4,
+  },
+  {
+    id: 'velocity-nine-districts',
+    gameId: 'velocity-nine',
+    title: 'Nine Districts',
+    description: 'Earn every other trophy in Velocity Nine.',
+    tier: 'platinum',
+    target: 1,
+    progress: 0,
+    unlockedDaysAgo: null,
+  },
+  {
+    id: 'emberfall-dragonfall',
+    gameId: 'emberfall',
+    title: 'Dragonfall',
+    description: 'End the dragon that already won.',
+    tier: 'gold',
+    target: 1,
+    progress: 1,
+    unlockedDaysAgo: 10,
+  },
+  {
+    id: 'crown-iron-crown',
+    gameId: 'crown-and-covenant',
+    title: 'Iron Crown',
+    description: 'Hold five alliances through a single winter.',
+    tier: 'silver',
+    target: 5,
+    progress: 2,
+    unlockedDaysAgo: null,
   },
 ]

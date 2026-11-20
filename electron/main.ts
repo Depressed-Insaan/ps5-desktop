@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerLibraryIpc, registerMediaScheme } from './library/ipc'
 import { finishAllSessions } from './library/launch'
-import { initStore } from './library/store'
+import { getSettings, initStore } from './library/store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -39,7 +39,7 @@ ipcMain.handle('app:info', () => ({
 
 let win: BrowserWindow | null = null
 
-function createWindow() {
+function createWindow(fullscreen: boolean) {
   win = new BrowserWindow({
     width: 1600,
     height: 900,
@@ -57,6 +57,7 @@ function createWindow() {
   })
 
   win.setMenuBarVisibility(false)
+  if (fullscreen) win.setFullScreen(true)
 
   // Avoid a white flash: the dashboard only appears once it has rendered.
   win.once('ready-to-show', () => win?.show())
@@ -84,7 +85,7 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow()
+    createWindow(getSettings().fullscreen)
   }
 })
 
@@ -96,5 +97,5 @@ app.on('before-quit', () => {
 app.whenReady().then(() => {
   initStore(app.getPath('userData'))
   registerLibraryIpc()
-  createWindow()
+  createWindow(getSettings().fullscreen)
 })

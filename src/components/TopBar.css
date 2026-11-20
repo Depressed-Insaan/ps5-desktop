@@ -84,6 +84,11 @@
   letter-spacing: 0.02em;
   color: #041220;
   border-radius: 50%;
-  background: linear-gradient(140deg, #cfe8ff, #7fb9ff 55%, #9b8cff);
-  box-shadow: 0 8px 22px rgba(70, 140, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent) 30%, white),
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 50%, #9b8cff)
+  );
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }

@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { Api, LibrarySnapshot } from '../src/types'
+import type { Api, AppSnapshot } from '../src/types'
 
 /**
  * The renderer only gets this small, typed surface. Adding a capability means
@@ -8,7 +8,8 @@ import type { Api, LibrarySnapshot } from '../src/types'
  */
 const api: Api = {
   getAppInfo: () => ipcRenderer.invoke('app:info'),
-  getLibrary: () => ipcRenderer.invoke('library:get'),
+  getState: () => ipcRenderer.invoke('state:get'),
+  getStorageInfo: () => ipcRenderer.invoke('storage:info'),
   importGames: () => ipcRenderer.invoke('library:import'),
   pickExecutable: () => ipcRenderer.invoke('library:pick-executable'),
   updateGame: (id, patch) => ipcRenderer.invoke('library:update', id, patch),
@@ -17,11 +18,17 @@ const api: Api = {
   clearArtwork: (id) => ipcRenderer.invoke('library:clear-artwork', id),
   launchGame: (id) => ipcRenderer.invoke('library:launch', id),
   revealGame: (id) => ipcRenderer.invoke('library:reveal', id),
-  onLibraryChanged: (listener) => {
-    const handler = (_event: IpcRendererEvent, snapshot: LibrarySnapshot) => listener(snapshot)
-    ipcRenderer.on('library:changed', handler)
+  updateSettings: (patch) => ipcRenderer.invoke('settings:update', patch),
+  updateProfile: (patch) => ipcRenderer.invoke('profile:update', patch),
+  addTrophy: (input) => ipcRenderer.invoke('trophies:add', input),
+  updateTrophy: (id, patch) => ipcRenderer.invoke('trophies:update', id, patch),
+  unlockTrophy: (id) => ipcRenderer.invoke('trophies:unlock', id),
+  removeTrophy: (id) => ipcRenderer.invoke('trophies:remove', id),
+  onStateChanged: (listener) => {
+    const handler = (_event: IpcRendererEvent, snapshot: AppSnapshot) => listener(snapshot)
+    ipcRenderer.on('state:changed', handler)
     return () => {
-      ipcRenderer.removeListener('library:changed', handler)
+      ipcRenderer.removeListener('state:changed', handler)
     }
   },
 }

@@ -10,6 +10,8 @@
   --accent: #5aa9ff;
   --mint: #4fe0c4;
   --hairline: rgba(255, 255, 255, 0.09);
+  /* Tint used by the cinematic backdrop; follows the selected theme. */
+  --ambient-tint: rgba(90, 169, 255, 0.16);
 
   /* Shape and motion */
   --radius-xl: 26px;
@@ -29,6 +31,19 @@
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Theme presets recolour the base surfaces; the accent is set separately. */
+:root[data-theme='aurora'] {
+  --ink-0: #06040f;
+  --ink-2: #171227;
+  --ambient-tint: rgba(155, 140, 255, 0.18);
+}
+
+:root[data-theme='ember'] {
+  --ink-0: #0a0605;
+  --ink-2: #201411;
+  --ambient-tint: rgba(255, 138, 92, 0.16);
 }
 
 * {
@@ -67,7 +82,7 @@ a {
 }
 
 ::selection {
-  background: rgba(90, 169, 255, 0.35);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 /* ---------- Shared buttons ---------- */
@@ -86,14 +101,19 @@ a {
   gap: 11px;
   padding: 0 32px;
   color: #04121f;
-  background: linear-gradient(135deg, #b3dcff, #5aa9ff 46%, #3f7cf0);
-  box-shadow: 0 18px 44px rgba(64, 132, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 40%, white),
+    var(--accent) 46%,
+    color-mix(in srgb, var(--accent) 72%, #101a2e)
+  );
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--accent) 34%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.65);
   transition: transform 0.24s var(--ease-out), box-shadow 0.24s var(--ease), opacity 0.24s var(--ease);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.015);
-  box-shadow: 0 24px 58px rgba(64, 132, 255, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 0 24px 58px color-mix(in srgb, var(--accent) 46%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .btn-primary:active:not(:disabled) {
@@ -131,6 +151,53 @@ a {
   .btn-ghost {
     transition: none;
   }
+}
+
+/* ---------- Shared form fields ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 11px 13px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: rgba(232, 239, 252, 0.32);
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 56px;
+  line-height: 1.5;
 }
 
 :focus-visible {

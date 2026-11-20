@@ -4,32 +4,23 @@ import { GameTile } from '@/components/GameTile'
 import { Shelf } from '@/components/Shelf'
 import { ClockIcon, LibraryIcon, PlayIcon, PlusIcon, StorageIcon } from '@/components/Icons'
 import { useDashboardNav } from '@/hooks/useDashboardNav'
-import type { LibraryController } from '@/hooks/useLibrary'
+import type { AppController } from '@/hooks/useAppState'
 import { artworkFor } from '@/data/artwork'
 import { formatLastPlayed, formatPlaytime } from '@/data/library'
-import { profile } from '@/data/profile'
-import type { AppInfo, Game } from '@/types'
+import { formatBytes, usedShare } from '@/data/storage'
+import type { AppInfo, Game, StorageInfo } from '@/types'
 import './HomeScreen.css'
 
 interface HomeScreenProps {
-  library: LibraryController
+  app: AppController
   appInfo: AppInfo | null
+  storage: StorageInfo | null
   notify: (message: string) => void
   onEdit: (id: string) => void
 }
 
-const STORAGE = {
-  total: '2 TB',
-  free: '0.4 TB',
-  parts: [
-    { label: 'Games', share: 58, color: 'linear-gradient(90deg, #5aa9ff, #7f8bff)' },
-    { label: 'Media', share: 14, color: 'linear-gradient(90deg, #9b8cff, #b58cff)' },
-    { label: 'Apps', share: 8, color: 'linear-gradient(90deg, #4fe0c4, #6ce7d0)' },
-  ],
-}
-
-export function HomeScreen({ library, appInfo, notify, onEdit }: HomeScreenProps) {
-  const { games, runningIds } = library
+export function HomeScreen({ app, appInfo, storage, notify, onEdit }: HomeScreenProps) {
+  const { games, runningIds, profile } = app
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const onGridKeyDown = useDashboardNav()
 
@@ -59,7 +50,7 @@ export function HomeScreen({ library, appInfo, notify, onEdit }: HomeScreenProps
     !artGames.some((game) => game.id === selected.id)
 
   async function importGames() {
-    const result = await library.importGames()
+    const result = await app.importGames()
     if (result.canceled) return
     if (result.added === 0) {
       notify('Those games are already in your library.')
@@ -77,9 +68,13 @@ export function HomeScreen({ library, appInfo, notify, onEdit }: HomeScreenProps
       onEdit(game.id)
       return
     }
-    const result = await library.launchGame(game.id)
+    const result = await app.launchGame(game.id)
     if (!result.ok) notify(result.error ?? 'This game could not be started.')
   }
+
+  const usedPercent = storage?.available
+    ? usedShare(storage.usedBytes, storage.totalBytes)
+    : 0
 
   const statusCards = (
     <div className="cards">
@@ -113,28 +108,35 @@ export function HomeScreen({ library, appInfo, notify, onEdit }: HomeScreenProps
           </span>
           <h3>Console storage</h3>
         </div>
-        <div className="storage">
-          <div className="storage__bar">
-            {STORAGE.parts.map((part) => (
+
+        {storage?.available ? (
+          <div className="storage">
+            <div className="storage__bar">
               <span
-                key={part.label}
-                className="storage__part"
-                style={{ width: `${part.share}%`, background: part.color }}
+                className="storage__part storage__part--used"
+                style={{ width: `${usedPercent}%` }}
               />
-            ))}
-          </div>
-          <div className="storage__legend">
-            {STORAGE.parts.map((part) => (
-              <span key={part.label}>
-                <i style={{ background: part.color }} aria-hidden="true" />
-                {part.label}
+            </div>
+            <div className="storage__legend">
+              <span>
+                <i className="storage__dot storage__dot--used" aria-hidden="true" />
+                Used {formatBytes(storage.usedBytes)}
               </span>
-            ))}
-            <span className="storage__free">
-              {STORAGE.free} free of {STORAGE.total}
-            </span>
+              <span>
+                <i className="storage__dot" aria-hidden="true" />
+                Free
+              </span>
+              <span className="storage__free">
+                {formatBytes(storage.freeBytes)} free of {formatBytes(storage.totalBytes)}
+              </span>
+            </div>
+            <p className="storage__drive">Drive {storage.drive.replace(/\\$/, '')}</p>
           </div>
-        </div>
+        ) : storage ? (
+          <p className="storage__unavailable">Storage information is unavailable right now.</p>
+        ) : (
+          <p className="storage__unavailable">Reading drive information…</p>
+        )}
       </article>
 
       <article className="card">
@@ -171,7 +173,7 @@ export function HomeScreen({ library, appInfo, notify, onEdit }: HomeScreenProps
 
         <section className="home__empty">
           <div className="home__emptyPanel">
-            {library.loading ? (
+            {app.loading ? (
               <p className="home__emptyBody">Loading your library…</p>
             ) : (
               <>
@@ -184,12 +186,12 @@ export function HomeScreen({ library, appInfo, notify, onEdit }: HomeScreenProps
                   type="button"
                   className="btn-primary"
                   onClick={importGames}
-                  disabled={!library.bridge}
+                  disabled={!app.bridge}
                 >
                   <PlusIcon size={16} />
                   Import games
                 </button>
-                {library.bridge ? null : (
+                {app.bridge ? null : (
                   <p className="home__emptyHint">Importing works in the desktop app.</p>
                 )}
               </>

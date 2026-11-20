@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import { FolderIcon, PencilIcon, PlayIcon, PlusIcon, TrashIcon } from '@/components/Icons'
-import type { LibraryController } from '@/hooks/useLibrary'
+import type { AppController } from '@/hooks/useAppState'
 import { artworkFor } from '@/data/artwork'
 import { formatLastPlayed, formatPlaytime, initialsFor } from '@/data/library'
 import type { Game } from '@/types'
 import './LibraryScreen.css'
 
 interface LibraryScreenProps {
-  library: LibraryController
+  app: AppController
   notify: (message: string) => void
   onEdit: (id: string) => void
 }
@@ -129,12 +129,12 @@ function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCar
   )
 }
 
-export function LibraryScreen({ library, notify, onEdit }: LibraryScreenProps) {
-  const { games, runningIds } = library
+export function LibraryScreen({ app, notify, onEdit }: LibraryScreenProps) {
+  const { games, runningIds } = app
   const installed = games.filter((game) => game.installed).length
 
   async function importGames() {
-    const result = await library.importGames()
+    const result = await app.importGames()
     if (result.canceled) return
     if (result.added === 0) {
       notify('Those games are already in your library.')
@@ -155,7 +155,7 @@ export function LibraryScreen({ library, notify, onEdit }: LibraryScreenProps) {
       onEdit(game.id)
       return
     }
-    const result = await library.launchGame(game.id)
+    const result = await app.launchGame(game.id)
     if (!result.ok) notify(result.error ?? 'This game could not be started.')
   }
 
@@ -164,7 +164,7 @@ export function LibraryScreen({ library, notify, onEdit }: LibraryScreenProps) {
       notify('Choose a launch target for this game first.')
       return
     }
-    await library.revealGame(game.id)
+    await app.revealGame(game.id)
   }
 
   return (
@@ -184,7 +184,7 @@ export function LibraryScreen({ library, notify, onEdit }: LibraryScreenProps) {
             type="button"
             className="btn-primary btn-primary--compact"
             onClick={importGames}
-            disabled={!library.bridge}
+            disabled={!app.bridge}
           >
             <PlusIcon size={16} />
             Import games
@@ -200,12 +200,12 @@ export function LibraryScreen({ library, notify, onEdit }: LibraryScreenProps) {
             type="button"
             className="btn-primary"
             onClick={importGames}
-            disabled={!library.bridge}
+            disabled={!app.bridge}
           >
             <PlusIcon size={16} />
             Import games
           </button>
-          {library.bridge ? null : (
+          {app.bridge ? null : (
             <p className="library__hint">Importing works in the desktop app.</p>
           )}
         </div>
@@ -220,7 +220,7 @@ export function LibraryScreen({ library, notify, onEdit }: LibraryScreenProps) {
               onEdit={() => onEdit(game.id)}
               onReveal={() => reveal(game)}
               onRemove={async () => {
-                await library.removeGame(game.id)
+                await app.removeGame(game.id)
                 notify(`${game.title} was removed from your library.`)
               }}
             />

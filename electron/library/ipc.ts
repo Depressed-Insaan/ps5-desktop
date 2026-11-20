@@ -1,22 +1,42 @@
-import { BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron'
 import type { OpenDialogOptions } from 'electron'
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
-import { unlink } from 'node:fs/promises'
+import { statfs, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { Game, GamePatch, LibrarySnapshot } from '../../src/types'
+import type {
+  AppSnapshot,
+  Game,
+  GamePatch,
+  NewTrophy,
+  ProfilePatch,
+  Settings,
+  SettingsPatch,
+  StorageInfo,
+  TrophyPatch,
+  TrophyTier,
+} from '../../src/types'
 import { launchGame, runningGameIds, setSessionEndHandler } from './launch'
 import {
   addGames,
   addPlaytime,
+  addTrophy,
   getGame,
+  getProfile,
+  getSettings,
+  getTrophy,
   listGames,
+  listTrophies,
   mediaDirectory,
   removeGame,
+  removeTrophy,
   setArtwork,
   updateGame,
+  updateProfile,
+  updateSettings,
+  updateTrophy,
 } from './store'
-import type { NewGame } from './store'
+import type { NewGame, StoredGame } from './store'
 
 /** Custom scheme used for artwork the user supplies from disk. */
 export const MEDIA_SCHEME = 'app-media'
@@ -24,6 +44,8 @@ export const MEDIA_SCHEME = 'app-media'
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif']
 const GAME_EXTENSIONS = ['exe', 'bat', 'cmd', 'lnk']
 const ACCENTS = ['#5aa9ff', '#ff8a5c', '#ff5aa8', '#ffa94d', '#7fe0a0', '#ffd166', '#4fd8ff', '#9b8cff']
+const TIERS: TrophyTier[] = ['bronze', 'silver', 'gold', 'platinum']
+const THEMES = ['midnight', 'aurora', 'ember']
 
 export function registerMediaScheme() {
   protocol.registerSchemesAsPrivileged([
@@ -34,7 +56,7 @@ export function registerMediaScheme() {
   ])
 }
 
-function toGame(game: ReturnType<typeof listGames>[number]): Game {
+function toGame(game: StoredGame): Game {
   return {
     id: game.id,
     title: game.title,
@@ -54,14 +76,20 @@ function toGame(game: ReturnType<typeof listGames>[number]): Game {
   }
 }
 
-function snapshot(): LibrarySnapshot {
-  return { games: listGames().map(toGame), runningIds: runningGameIds() }
+function snapshot(): AppSnapshot {
+  return {
+    games: listGames().map(toGame),
+    runningIds: runningGameIds(),
+    trophies: listTrophies(),
+    settings: getSettings(),
+    profile: getProfile(),
+  }
 }
 
 function broadcast() {
   const next = snapshot()
   for (const window of BrowserWindow.getAllWindows()) {
-    window.webContents.send('library:changed', next)
+    window.webContents.send('state:changed', next)
   }
 }
 
@@ -120,6 +148,100 @@ async function removeMediaFile(fileName: string) {
   }
 }
 
+function applyFullscreen(fullscreen: boolean) {
+  for (const window of BrowserWindow.getAllWindows()) {
+    window.setFullScreen(fullscreen)
+  }
+}
+
+function readTrophyInput(raw: unknown): NewTrophy | null {
+  if (!raw || typeof raw !== 'object') return null
+  const input = raw as Record<string, unknown>
+
+  if (typeof input.gameId !== 'string' || !getGame(input.gameId)) return null
+  if (typeof input.title !== 'string' || !input.title.trim()) return null
+  if (typeof input.description !== 'string') return null
+  if (!TIERS.includes(input.tier as TrophyTier)) return null
+
+  return {
+    gameId: input.gameId,
+    title: input.title.slice(0, 120),
+    description: input.description.slice(0, 400),
+    tier: input.tier as TrophyTier,
+    target: typeof input.target === 'number' ? input.target : 1,
+    progress: typeof input.progress === 'number' ? input.progress : 0,
+  }
+}
+
+function readTrophyPatch(raw: unknown): TrophyPatch {
+  if (!raw || typeof raw !== 'object') return {}
+  const input = raw as Record<string, unknown>
+  const patch: TrophyPatch = {}
+
+  if (typeof input.title === 'string') patch.title = input.title.slice(0, 120)
+  if (typeof input.description === 'string') patch.description = input.description.slice(0, 400)
+  if (TIERS.includes(input.tier as TrophyTier)) patch.tier = input.tier as TrophyTier
+  if (typeof input.target === 'number') patch.target = input.target
+  if (typeof input.progress === 'number') patch.progress = input.progress
+
+  return patch
+}
+
+function readSettingsPatch(raw: unknown): SettingsPatch {
+  if (!raw || typeof raw !== 'object') return {}
+  const input = raw as Record<string, unknown>
+  const patch: SettingsPatch = {}
+
+  if (typeof input.accent === 'string' && /^#[0-9a-f]{6}$/i.test(input.accent)) {
+    patch.accent = input.accent
+  }
+  if (typeof input.theme === 'string' && THEMES.includes(input.theme)) {
+    patch.theme = input.theme as Settings['theme']
+  }
+  if (input.startView === 'home' || input.startView === 'library') {
+    patch.startView = input.startView
+  }
+  if (typeof input.fullscreen === 'boolean') patch.fullscreen = input.fullscreen
+  if (typeof input.notifyTrophies === 'boolean') patch.notifyTrophies = input.notifyTrophies
+  if (typeof input.notifySessions === 'boolean') patch.notifySessions = input.notifySessions
+
+  return patch
+}
+
+function readProfilePatch(raw: unknown): ProfilePatch {
+  if (!raw || typeof raw !== 'object') return {}
+  const input = raw as Record<string, unknown>
+  const patch: ProfilePatch = {}
+
+  if (typeof input.name === 'string') patch.name = input.name.slice(0, 60)
+  if (typeof input.initials === 'string') patch.initials = input.initials.slice(0, 2)
+
+  return patch
+}
+
+async function readStorage(): Promise<StorageInfo> {
+  const drive = process.platform === 'win32' ? path.parse(app.getPath('home')).root : '/'
+
+  try {
+    const stats = await statfs(drive)
+    const totalBytes = stats.blocks * stats.bsize
+    const freeBytes = stats.bavail * stats.bsize
+
+    if (!totalBytes) throw new Error('The drive reported no capacity.')
+
+    return {
+      available: true,
+      drive,
+      totalBytes,
+      usedBytes: Math.max(0, totalBytes - freeBytes),
+      freeBytes: Math.max(0, freeBytes),
+    }
+  } catch (error) {
+    console.warn('[library] Disk space could not be read.', error)
+    return { available: false, drive, totalBytes: 0, usedBytes: 0, freeBytes: 0 }
+  }
+}
+
 export function registerLibraryIpc() {
   setSessionEndHandler((gameId, seconds, endedAt) => {
     addPlaytime(gameId, seconds, endedAt)
@@ -133,7 +255,9 @@ export function registerLibraryIpc() {
     return net.fetch(pathToFileURL(file).toString())
   })
 
-  ipcMain.handle('library:get', () => snapshot())
+  ipcMain.handle('state:get', () => snapshot())
+
+  ipcMain.handle('storage:info', () => readStorage())
 
   ipcMain.handle('library:import', async () => {
     const result = await showOpenDialog({
@@ -249,5 +373,52 @@ export function registerLibraryIpc() {
     if (typeof id !== 'string') return
     const game = getGame(id)
     if (game?.launcher && existsSync(game.launcher)) shell.showItemInFolder(game.launcher)
+  })
+
+  ipcMain.handle('settings:update', (_event, patch: unknown) => {
+    const before = getSettings().fullscreen
+    const settings = updateSettings(readSettingsPatch(patch))
+    if (settings.fullscreen !== before) applyFullscreen(settings.fullscreen)
+    broadcast()
+    return snapshot()
+  })
+
+  ipcMain.handle('profile:update', (_event, patch: unknown) => {
+    updateProfile(readProfilePatch(patch))
+    broadcast()
+    return snapshot()
+  })
+
+  ipcMain.handle('trophies:add', (_event, input: unknown) => {
+    const trophy = readTrophyInput(input)
+    if (trophy) {
+      addTrophy(trophy)
+      broadcast()
+    }
+    return snapshot()
+  })
+
+  ipcMain.handle('trophies:update', (_event, id: unknown, patch: unknown) => {
+    if (typeof id === 'string') {
+      updateTrophy(id, readTrophyPatch(patch))
+      broadcast()
+    }
+    return snapshot()
+  })
+
+  ipcMain.handle('trophies:unlock', (_event, id: unknown) => {
+    if (typeof id === 'string') {
+      const trophy = getTrophy(id)
+      if (trophy && !trophy.unlockedAt) {
+        updateTrophy(id, { progress: trophy.target })
+      }
+      broadcast()
+    }
+    return snapshot()
+  })
+
+  ipcMain.handle('trophies:remove', (_event, id: unknown) => {
+    if (typeof id === 'string' && removeTrophy(id)) broadcast()
+    return snapshot()
   })
 }

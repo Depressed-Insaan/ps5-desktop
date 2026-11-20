@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SearchIcon } from '@/components/Icons'
-import { profile } from '@/data/profile'
+import type { Profile } from '@/types'
 import './TopBar.css'
 
 function greetingFor(hour: number) {
@@ -10,7 +10,11 @@ function greetingFor(hour: number) {
   return 'Good evening'
 }
 
-export function TopBar() {
+interface TopBarProps {
+  profile: Profile
+}
+
+export function TopBar({ profile }: TopBarProps) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {

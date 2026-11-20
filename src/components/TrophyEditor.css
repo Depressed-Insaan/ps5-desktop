@@ -1,0 +1,64 @@
+.trophy-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.trophy-tiers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.trophy-tier {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 40px;
+  font-size: 11.5px;
+  font-weight: 550;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-dim);
+  border: 1px solid var(--hairline);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.trophy-tier:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.trophy-tier.is-active {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--tier) 60%, transparent);
+  background: color-mix(in srgb, var(--tier) 16%, transparent);
+}
+
+.trophy-tier__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tier);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tier) 65%, transparent);
+}
+
+.trophy-form__hint {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-faint);
+}
+
+.trophy-form__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}

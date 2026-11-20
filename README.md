@@ -5,9 +5,9 @@ built with Electron, React, TypeScript and Vite.
 
 ## Status
 
-Phases 1 to 3 are complete. The dashboard is backed by a real game library that
-lives on this PC: you can import games, launch them, track playtime and give each
-one its own artwork, name and description.
+Phases 1 to 4 are complete. The dashboard is backed by a real game library that
+lives on this PC: you can import games, launch them, track playtime, give each one
+its own artwork, collect trophies, and tune the console to your taste.
 
 ## Requirements
 
@@ -34,31 +34,54 @@ use `npx vite build` if you only want to check the bundle.
   time it was open is added to its playtime when it closes.
 - **Edit** changes the title, genre, description, accent colour, launch
   arguments, favourite flag and artwork. A launch target can be chosen here too.
-- **Remove** takes a game out of the collection and deletes any artwork you
-  supplied for it.
+- **Remove** takes a game out of the collection, deletes any artwork you
+  supplied for it, and removes its trophies.
 
-The library is stored as JSON in the app's data directory
-(`%APPDATA%\ani-games\library.json`) with custom artwork copied into
-`%APPDATA%\ani-games\media\`. A fresh install starts with a small sample
-collection; point each sample at a game on this PC, or remove the ones you do
-not want.
+## Trophies
+
+Each game keeps its own trophy set with Bronze, Silver, Gold and Platinum tiers.
+Add a trophy from the Trophies screen, give it a progress target, raise its
+progress or unlock it by hand. The screen shows totals per tier, recently
+unlocked trophies and a completion percentage for every game.
+
+## Settings
+
+Settings apply immediately and are remembered across restarts:
+
+- **Appearance**: three themes (Midnight, Aurora, Ember) and an accent colour
+  that recolours buttons, highlights, progress bars and the sidebar.
+- **Startup**: open on Home or Library, and start in fullscreen.
+- **Notifications**: in-app notices for trophy unlocks and play sessions.
+- **Profile**: name and initials, shown in the top bar and greeting.
+
+The console storage card reads the real free and used space of the drive that
+holds your files.
+
+## Where the data lives
+
+`%APPDATA%\ani-games\library.json` holds the library, trophies, settings and
+profile. Custom artwork is copied into `%APPDATA%\ani-games\media\` and served
+through a dedicated `app-media://` scheme.
+
+A fresh install starts with a small sample collection of games and trophies.
+Remove the samples you do not want, or point them at games on this PC.
 
 ## Layout
 
 ```
 electron/
-  main.ts        window shell and lifecycle
+  main.ts        window shell, lifecycle and the saved fullscreen preference
   library/
-    store.ts     persisted library document and its edits
+    store.ts     persisted document: games, trophies, settings and profile
     launch.ts    process launching and playtime sessions
-    ipc.ts       IPC handlers, import dialogs, app-media:// artwork protocol
-    seeds.ts     sample collection used on first run
+    ipc.ts       IPC handlers, import dialogs, disk space, app-media:// protocol
+    seeds.ts     sample games and trophies used on first run
   preload.ts     the typed bridge exposed to the renderer
 src/
-  components/    rail, top bar, shelves, tiles, game editor, toast, icons
-  screens/       home, library, placeholder views
-  data/          artwork resolution, display helpers, local profile
-  hooks/         library state and keyboard navigation
+  components/    rail, top bar, shelves, tiles, editors, modal, toast, icons
+  screens/       home, library, trophies, settings
+  data/          artwork resolution, display helpers, trophy helpers, storage
+  hooks/         app state and keyboard navigation
   assets/        generated sample artwork
 ```
 
@@ -66,14 +89,17 @@ src/
 
 Arrow keys move between tiles and shelves, `Home`/`End` jump to the ends of a
 row, and `Enter` selects the focused game. The navigation model is deliberately
-data-driven so a gamepad can drive it in a later phase. `Escape` closes the game
+data-driven so a gamepad can drive it in a later phase. `Escape` closes an open
 editor.
 
 ## Known gaps
 
-- Trophies and Settings are placeholders.
-- The storage card shows a fixed figure rather than reading the disk.
+- Gamepad and phone controls are not implemented.
+- Trophies are manual: nothing watches a game's own achievement system.
+- There are no accounts or cloud sync; everything is local.
 - Playtime for shortcuts and batch files covers only the moment they are handed
   to Windows, so it is not tracked accurately for them.
+- The storage card reports the drive holding the user's home folder, not each
+  drive on the machine.
 - The Electron and Vite versions tracked by the template are older than the
   current releases; upgrading is a separate, deliberate change.
