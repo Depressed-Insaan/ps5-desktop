@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SearchIcon } from '@/components/Icons'
-import { profile } from '@/data/mockGames'
+import { profile } from '@/data/profile'
 import './TopBar.css'
 
 function greetingFor(hour: number) {

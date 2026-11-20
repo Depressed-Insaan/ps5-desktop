@@ -93,6 +93,24 @@
   transform: none;
 }
 
+/* Shown in place of the hover play button while the game is running. */
+.tile__live {
+  position: absolute;
+  z-index: 2;
+  top: 9px;
+  left: 9px;
+  padding: 4px 9px;
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #d9fff4;
+  border-radius: 999px;
+  background: rgba(9, 24, 21, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(79, 224, 196, 0.4);
+  backdrop-filter: blur(8px);
+}
+
 .tile__meta {
   display: flex;
   flex-direction: column;

@@ -70,6 +70,69 @@ a {
   background: rgba(90, 169, 255, 0.35);
 }
 
+/* ---------- Shared buttons ---------- */
+
+.btn-primary,
+.btn-ghost {
+  height: 54px;
+  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 32px;
+  color: #04121f;
+  background: linear-gradient(135deg, #b3dcff, #5aa9ff 46%, #3f7cf0);
+  box-shadow: 0 18px 44px rgba(64, 132, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  transition: transform 0.24s var(--ease-out), box-shadow 0.24s var(--ease), opacity 0.24s var(--ease);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.015);
+  box-shadow: 0 24px 58px rgba(64, 132, 255, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.995);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.btn-primary--compact {
+  height: 44px;
+  padding: 0 22px;
+  font-size: 13.5px;
+}
+
+.btn-ghost {
+  padding: 0 28px;
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(20px);
+  transition: background 0.24s var(--ease), border-color 0.24s var(--ease), transform 0.24s var(--ease);
+}
+
+.btn-ghost:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.11);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary,
+  .btn-ghost {
+    transition: none;
+  }
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;

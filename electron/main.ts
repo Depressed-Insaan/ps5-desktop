@@ -1,6 +1,9 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { registerLibraryIpc, registerMediaScheme } from './library/ipc'
+import { finishAllSessions } from './library/launch'
+import { initStore } from './library/store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -12,7 +15,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // │ ├─┬ dist-electron
 // │ │ ├── main.js
 // │ │ └── preload.mjs
-// │
+// │ │
 process.env.APP_ROOT = path.join(__dirname, '..')
 
 // 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
@@ -22,6 +25,9 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
   ? path.join(process.env.APP_ROOT, 'public')
   : RENDERER_DIST
+
+// Must run before the app is ready, so the scheme can serve local artwork.
+registerMediaScheme()
 
 // Read-only facts about the app, consumed by the dashboard status card.
 ipcMain.handle('app:info', () => ({
@@ -82,4 +88,13 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+// Bank the playtime of anything still running before the app goes away.
+app.on('before-quit', () => {
+  finishAllSessions()
+})
+
+app.whenReady().then(() => {
+  initStore(app.getPath('userData'))
+  registerLibraryIpc()
+  createWindow()
+})

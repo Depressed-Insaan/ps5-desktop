@@ -1,7 +1,7 @@
 import type { ViewId } from '@/types'
 import './PlaceholderScreen.css'
 
-type PlaceholderView = Exclude<ViewId, 'home'>
+type PlaceholderView = Exclude<ViewId, 'home' | 'library'>
 
 interface Copy {
   title: string
@@ -10,11 +10,6 @@ interface Copy {
 }
 
 const COPY: Record<PlaceholderView, Copy> = {
-  library: {
-    title: 'Game library',
-    body: 'Your real collection will live here: imported games, custom artwork and launch settings.',
-    items: ['Import executables and scripts', 'Custom names, covers and descriptions', 'Collections and categories'],
-  },
   trophies: {
     title: 'Trophies',
     body: 'Bronze to Platinum, with progress tracking and unlock notifications.',

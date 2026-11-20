@@ -1,40 +1,11 @@
-import { GAMES, continuePlaying, favourites, profile } from '@/data/mockGames'
-import type { Game, Profile } from '@/types'
-
 /**
- * The dashboard reads game data only from this module. Phase 3 swaps the
- * imports below for values returned by the main process; the screens and
- * components stay untouched because they never import sample data directly.
+ * Display helpers for library values. The library itself lives in the main
+ * process; the renderer only formats the numbers it receives.
  */
-export interface LibraryShelf {
-  id: string
-  title: string
-  games: Game[]
-}
 
-/** Every game, once each, in dashboard order. */
-export const allGames: Game[] = GAMES
-
-/** The game the dashboard opens on, before the user picks a tile. */
-export const featuredGame: Game = GAMES[0]
-
-export const shelves: LibraryShelf[] = [
-  { id: 'continue', title: 'Continue playing', games: continuePlaying },
-  { id: 'favourites', title: 'Favourites', games: favourites },
-  { id: 'library', title: 'Your library', games: GAMES },
-]
-
-export const libraryProfile: Profile = profile
-
-export const libraryStats = {
-  installed: GAMES.filter((game) => game.installed).length,
-  favourites: favourites.length,
-  total: GAMES.length,
-}
-
-export function findGame(id: string): Game | undefined {
-  return GAMES.find((game) => game.id === id)
-}
+const MINUTE = 60_000
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
 
 /** Two-letter stand-in used when a game has no artwork. */
 export function initialsFor(title: string): string {
@@ -45,4 +16,36 @@ export function initialsFor(title: string): string {
     .slice(0, 2)
     .join('')
     .toUpperCase()
+}
+
+/** `48 h`, `45 min`, or an empty string for a game that was never played. */
+export function formatPlaytime(minutes: number): string {
+  if (minutes <= 0) return ''
+  if (minutes < 60) return `${Math.round(minutes)} min`
+
+  const hours = minutes / 60
+  if (hours < 10) return `${hours.toFixed(1).replace(/\.0$/, '')} h`
+  return `${Math.round(hours)} h`
+}
+
+export function formatLastPlayed(at: number | null): string {
+  if (!at) return 'Never played'
+
+  const elapsed = Date.now() - at
+  const minutes = Math.floor(elapsed / MINUTE)
+  if (minutes < 1) return 'Played just now'
+  if (minutes < 60) return `Played ${minutes} min ago`
+
+  const hours = Math.floor(elapsed / HOUR)
+  if (hours === 1) return 'Played 1 hour ago'
+  if (hours < 24) return `Played ${hours} hours ago`
+
+  const days = Math.floor(elapsed / DAY)
+  if (days === 1) return 'Played yesterday'
+  if (days < 7) return `Played ${days} days ago`
+  if (days < 14) return 'Played last week'
+  if (days < 30) return `Played ${Math.floor(days / 7)} weeks ago`
+  if (days < 60) return 'Played last month'
+  if (days < 365) return `Played ${Math.floor(days / 30)} months ago`
+  return 'Played over a year ago'
 }

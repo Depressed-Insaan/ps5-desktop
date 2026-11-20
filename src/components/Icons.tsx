@@ -106,6 +106,50 @@ export function ClockIcon({ size = 16 }: IconProps) {
   )
 }
 
+export function PlusIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M12 5.5v13M5.5 12h13" />
+    </svg>
+  )
+}
+
+export function PencilIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4.6 19.4h3.7L19 8.7a2 2 0 0 0-2.8-2.8L5.5 16.7l-.9 2.7Z" />
+      <path d="m14.9 7.2 2.8 2.8" />
+    </svg>
+  )
+}
+
+export function TrashIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M4.8 7h14.4" />
+      <path d="M9.4 7V5.2h5.2V7" />
+      <path d="M6.6 7l.9 11.4a1.6 1.6 0 0 0 1.6 1.5h5.8a1.6 1.6 0 0 0 1.6-1.5L17.4 7" />
+      <path d="M10.4 10.8v6M13.6 10.8v6" />
+    </svg>
+  )
+}
+
+export function FolderIcon({ size = 16 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="M3.6 7.4a2 2 0 0 1 2-2h3.1l1.8 2.2h6.9a2 2 0 0 1 2 2v7.6a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2Z" />
+    </svg>
+  )
+}
+
+export function CloseIcon({ size = 18 }: IconProps) {
+  return (
+    <svg {...base(size)}>
+      <path d="m6.5 6.5 11 11M17.5 6.5l-11 11" />
+    </svg>
+  )
+}
+
 export function StorageIcon({ size = 20 }: IconProps) {
   return (
     <svg {...base(size)}>
