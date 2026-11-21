@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import type {
+  LaunchConfig,
   NewTrophy,
   Profile,
   ProfilePatch,
@@ -11,6 +12,13 @@ import type {
   TrophyPatch,
   TrophyTier,
 } from '../../src/types'
+import {
+  emptyLaunch,
+  launchProjection,
+  normaliseLaunch,
+  runtimeForEntry,
+} from '../launch/config'
+import { parseArgs } from '../launch/args'
 import { SEED_GAMES, SEED_TROPHIES } from './seeds'
 
 /**
@@ -28,6 +36,8 @@ export interface StoredGame {
   /** Absolute path to the executable or script that starts the game. */
   launcher: string
   launcherArgs: string
+  /** Authoritative Phase 5 descriptor; the two fields above mirror it. */
+  launch: LaunchConfig
   /** Bundled artwork shipped inside the renderer, keyed by game. */
   artworkKey: string | null
   /** File name inside the media directory, for user-supplied artwork. */
@@ -47,6 +57,7 @@ export interface GameUpdate {
   favorite?: boolean
   launcher?: string
   launcherArgs?: string
+  launch?: LaunchConfig
 }
 
 interface AppDocument {
@@ -58,6 +69,13 @@ interface AppDocument {
 }
 
 const TIERS: TrophyTier[] = ['bronze', 'silver', 'gold', 'platinum']
+
+/**
+ * Version 3 adds `launch`, the descriptor the runtime registry reads. The
+ * `launcher`/`launcherArgs` pair above is kept in sync so older code paths and
+ * older documents keep behaving exactly as they did.
+ */
+const DOCUMENT_VERSION = 3
 
 export const DEFAULT_SETTINGS: Settings = {
   accent: '#5aa9ff',
@@ -112,6 +130,7 @@ function createSeeds(now: number): StoredGame[] {
     favorite: seed.favorite,
     launcher: '',
     launcherArgs: '',
+    launch: emptyLaunch(),
     artworkKey: seed.artworkKey,
     artworkFile: null,
     playtimeSeconds: Math.round(seed.playtimeHours * 3600),
@@ -138,7 +157,7 @@ function createSeedTrophies(now: number): Trophy[] {
 function createDocument(): AppDocument {
   const now = Date.now()
   return {
-    version: 2,
+    version: DOCUMENT_VERSION,
     games: createSeeds(now),
     trophies: createSeedTrophies(now),
     settings: { ...DEFAULT_SETTINGS },
@@ -161,6 +180,18 @@ function normaliseGame(raw: unknown): StoredGame | null {
   const input = raw as Record<string, unknown>
   if (typeof input.id !== 'string' || typeof input.title !== 'string') return null
 
+  const addedAt = typeof input.addedAt === 'number' ? input.addedAt : Date.now()
+  const launcher = typeof input.launcher === 'string' ? input.launcher : ''
+  const launcherArgs = typeof input.launcherArgs === 'string' ? input.launcherArgs : ''
+
+  /*
+   * A document written before Phase 5 has no `launch`, so it is rebuilt from
+   * the old pair: same entry, same arguments, same working folder. Those games
+   * are also marked trusted, because they were already playable.
+   */
+  const launch = normaliseLaunch(input.launch, { entry: launcher, args: launcherArgs, addedAt })
+  const projection = launchProjection(launch)
+
   return {
     id: input.id,
     title: input.title,
@@ -168,8 +199,9 @@ function normaliseGame(raw: unknown): StoredGame | null {
     genre: typeof input.genre === 'string' ? input.genre : '',
     accent: typeof input.accent === 'string' ? input.accent : '#5aa9ff',
     favorite: input.favorite === true,
-    launcher: typeof input.launcher === 'string' ? input.launcher : '',
-    launcherArgs: typeof input.launcherArgs === 'string' ? input.launcherArgs : '',
+    launcher: projection.launcher,
+    launcherArgs: projection.launcherArgs,
+    launch,
     artworkKey: typeof input.artworkKey === 'string' ? input.artworkKey : null,
     artworkFile: typeof input.artworkFile === 'string' ? input.artworkFile : null,
     playtimeSeconds:
@@ -177,7 +209,7 @@ function normaliseGame(raw: unknown): StoredGame | null {
         ? input.playtimeSeconds
         : 0,
     lastPlayedAt: typeof input.lastPlayedAt === 'number' ? input.lastPlayedAt : null,
-    addedAt: typeof input.addedAt === 'number' ? input.addedAt : Date.now(),
+    addedAt,
   }
 }
 
@@ -260,14 +292,20 @@ function readDocument(): AppDocument {
         : []
 
       const migrated: AppDocument = {
-        version: 2,
+        version: DOCUMENT_VERSION,
         games,
         trophies,
         settings: normaliseSettings(parsed.settings),
         profile: normaliseProfile(parsed.profile),
       }
 
-      if (!Array.isArray(parsed.trophies) || !parsed.settings || !parsed.profile) {
+      // Any older shape is rewritten once, in place, before it is used.
+      if (
+        parsed.version !== DOCUMENT_VERSION ||
+        !Array.isArray(parsed.trophies) ||
+        !parsed.settings ||
+        !parsed.profile
+      ) {
         writeDocument(migrated)
       } else {
         document = migrated
@@ -320,8 +358,31 @@ export function updateGame(id: string, update: GameUpdate): StoredGame | undefin
   if (update.genre !== undefined) game.genre = update.genre.trim()
   if (update.accent !== undefined) game.accent = update.accent
   if (update.favorite !== undefined) game.favorite = update.favorite
-  if (update.launcher !== undefined) game.launcher = update.launcher.trim()
-  if (update.launcherArgs !== undefined) game.launcherArgs = update.launcherArgs.trim()
+
+  /*
+   * The old single-target edit still works: it rebuilds the descriptor around
+   * the chosen entry, so a shortcut, a batch file or an executable all keep
+   * starting the way they always did.
+   */
+  if (update.launcher !== undefined) {
+    const entry = update.launcher.trim()
+    game.launch = normaliseLaunch(
+      { entry, runtime: runtimeForEntry(entry), args: game.launch.args, trustedAt: null },
+      { entry, args: game.launcherArgs, addedAt: game.addedAt },
+    )
+  }
+  if (update.launcherArgs !== undefined) {
+    game.launch = {
+      ...game.launch,
+      args: parseArgs(update.launcherArgs.trim()),
+      trustedAt: null,
+    }
+  }
+  if (update.launch !== undefined) game.launch = update.launch
+
+  const projection = launchProjection(game.launch)
+  game.launcher = projection.launcher
+  game.launcherArgs = projection.launcherArgs
 
   writeDocument(current)
   return game

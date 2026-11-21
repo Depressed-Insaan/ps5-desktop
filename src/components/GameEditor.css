@@ -16,6 +16,81 @@
   gap: 8px;
 }
 
+.editor__path--wrap {
+  flex-wrap: wrap;
+}
+
+.editor__path--wrap input {
+  min-width: 220px;
+}
+
+/* ---------- Launch preview ---------- */
+
+.editor__launch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 13px;
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.editor__launchHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor__badge {
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #d9fff4;
+  border-radius: 999px;
+  background: rgba(9, 24, 21, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(79, 224, 196, 0.35);
+}
+
+.editor__watch {
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--text-faint);
+}
+
+.editor__command {
+  display: block;
+  overflow: hidden;
+  padding: 7px 10px;
+  font-family: 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-dim);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.editor__hint,
+.editor__warning {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.5;
+  color: var(--text-faint);
+  overflow-wrap: anywhere;
+}
+
+.editor__warning {
+  color: #ffc9a3;
+}
+
 .editor__path input {
   flex: 1;
   min-width: 0;

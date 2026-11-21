@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import type {
   AppSnapshot,
   GamePatch,
+  ImportCandidate,
   ImportResult,
+  ImportSelection,
+  LaunchDraft,
+  LaunchPatch,
+  LaunchPreview,
   LaunchResult,
   NewTrophy,
   ProfilePatch,
@@ -35,6 +40,12 @@ export interface AppController extends AppSnapshot {
   bridge: boolean
   importGames(): Promise<ImportResult>
   pickExecutable(): Promise<string | null>
+  pickLaunchTarget(kind: 'file' | 'folder'): Promise<string[]>
+  inspectPaths(paths: string[]): Promise<ImportCandidate[]>
+  importCandidates(selection: ImportSelection[]): Promise<ImportResult>
+  updateLaunch(id: string, patch: LaunchPatch): Promise<void>
+  previewLaunch(id: string, draft: LaunchDraft): Promise<LaunchPreview | null>
+  stopGame(id: string): Promise<void>
   updateGame(id: string, patch: GamePatch): Promise<void>
   removeGame(id: string): Promise<void>
   chooseArtwork(id: string): Promise<void>
@@ -93,6 +104,36 @@ export function useAppState(): AppController {
   const pickExecutable = useCallback(async () => {
     if (!window.api) return null
     return window.api.pickExecutable()
+  }, [])
+
+  const pickLaunchTarget = useCallback(async (kind: 'file' | 'folder') => {
+    if (!window.api) return []
+    return window.api.pickLaunchTarget(kind)
+  }, [])
+
+  const inspectPaths = useCallback(async (paths: string[]) => {
+    if (!window.api) return []
+    return window.api.inspectPaths(paths)
+  }, [])
+
+  const importCandidates = useCallback(async (selection: ImportSelection[]) => {
+    if (!window.api) return { added: 0, skipped: 0, canceled: true }
+    return window.api.importCandidates(selection)
+  }, [])
+
+  const updateLaunch = useCallback(async (id: string, patch: LaunchPatch) => {
+    if (!window.api) return
+    setSnapshot(await window.api.updateLaunch(id, patch))
+  }, [])
+
+  const previewLaunch = useCallback(async (id: string, draft: LaunchDraft) => {
+    if (!window.api) return null
+    return window.api.previewLaunch(id, draft)
+  }, [])
+
+  const stopGame = useCallback(async (id: string) => {
+    if (!window.api) return
+    setSnapshot(await window.api.stopGame(id))
   }, [])
 
   const updateGame = useCallback(async (id: string, patch: GamePatch) => {
@@ -174,6 +215,12 @@ export function useAppState(): AppController {
     bridge,
     importGames,
     pickExecutable,
+    pickLaunchTarget,
+    inspectPaths,
+    importCandidates,
+    updateLaunch,
+    previewLaunch,
+    stopGame,
     updateGame,
     removeGame,
     chooseArtwork,

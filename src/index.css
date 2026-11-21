@@ -167,7 +167,8 @@ a {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   padding: 11px 13px;
   font: inherit;
@@ -189,9 +190,15 @@ a {
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   border-color: color-mix(in srgb, var(--accent) 70%, transparent);
   background: rgba(255, 255, 255, 0.08);
+}
+
+.field select {
+  appearance: none;
+  cursor: pointer;
 }
 
 .field textarea {

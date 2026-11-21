@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerLibraryIpc, registerMediaScheme } from './library/ipc'
-import { finishAllSessions } from './library/launch'
+import { finishAllSessions } from './launch/session'
 import { getSettings, initStore } from './library/store'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

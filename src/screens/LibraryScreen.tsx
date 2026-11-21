@@ -11,22 +11,30 @@ interface LibraryScreenProps {
   app: AppController
   notify: (message: string) => void
   onEdit: (id: string) => void
+  onImport: () => void
 }
 
 interface GameCardProps {
   game: Game
   running: boolean
   onPlay: () => void
+  onStop: () => void
   onEdit: () => void
   onReveal: () => void
   onRemove: () => void
 }
 
-function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCardProps) {
+function GameCard({ game, running, onPlay, onStop, onEdit, onReveal, onRemove }: GameCardProps) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
   const art = artworkFor(game)
   const hasArt = Boolean(art.cover) && failedSrc !== art.cover
+  const canPlay = Boolean(game.launch.entry)
+  const warning =
+    game.launchWarning ??
+    (game.requiresTrust && !game.trusted
+      ? 'Review and trust this game before playing it.'
+      : null)
 
   return (
     <article
@@ -56,15 +64,17 @@ function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCar
           </span>
         ) : null}
 
-        <button
-          type="button"
-          className="game-card__play"
-          onClick={onPlay}
-          aria-label={game.launcher ? `Play ${game.title}` : `Set up ${game.title}`}
-        >
-          <PlayIcon size={15} />
-          {game.launcher ? 'Play' : 'Set up'}
-        </button>
+        {running ? null : (
+          <button
+            type="button"
+            className="game-card__play"
+            onClick={onPlay}
+            aria-label={canPlay ? `Play ${game.title}` : `Set up ${game.title}`}
+          >
+            <PlayIcon size={15} />
+            {canPlay ? 'Play' : 'Set up'}
+          </button>
+        )}
       </div>
 
       <div className="game-card__body">
@@ -73,8 +83,10 @@ function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCar
         </h3>
         <p className="game-card__meta">
           <span>{game.genre || 'Game'}</span>
+          <span>{game.launchLabel}</span>
           <span>{formatPlaytime(game.playtimeMinutes) || 'Not played'}</span>
         </p>
+        {warning ? <p className="game-card__warning">{warning}</p> : null}
         <p className="game-card__when">{formatLastPlayed(game.lastPlayedAt)}</p>
 
         <div className="game-card__actions">
@@ -98,6 +110,11 @@ function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCar
             </>
           ) : (
             <>
+              {running ? (
+                <button type="button" className="game-card__action is-stop" onClick={onStop}>
+                  Stop
+                </button>
+              ) : null}
               <button type="button" className="game-card__action" onClick={onEdit}>
                 <PencilIcon size={14} />
                 Edit
@@ -106,7 +123,7 @@ function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCar
                 type="button"
                 className="game-card__action is-icon"
                 onClick={onReveal}
-                disabled={!game.launcher}
+                disabled={!canPlay}
                 aria-label={`Show ${game.title} in its folder`}
                 title="Show in folder"
               >
@@ -129,39 +146,27 @@ function GameCard({ game, running, onPlay, onEdit, onReveal, onRemove }: GameCar
   )
 }
 
-export function LibraryScreen({ app, notify, onEdit }: LibraryScreenProps) {
+export function LibraryScreen({ app, notify, onEdit, onImport }: LibraryScreenProps) {
   const { games, runningIds } = app
   const installed = games.filter((game) => game.installed).length
 
-  async function importGames() {
-    const result = await app.importGames()
-    if (result.canceled) return
-    if (result.added === 0) {
-      notify('Those games are already in your library.')
-      return
-    }
-
-    const skipped =
-      result.skipped > 0 ? ` ${result.skipped} were already here.` : ''
-    notify(
-      result.added === 1
-        ? `Added 1 game to your library.${skipped}`
-        : `Added ${result.added} games to your library.${skipped}`,
-    )
-  }
-
   async function play(game: Game) {
-    if (!game.launcher) {
+    if (!game.launch.entry) {
       onEdit(game.id)
       return
     }
+
     const result = await app.launchGame(game.id)
     if (!result.ok) notify(result.error ?? 'This game could not be started.')
   }
 
+  async function stop(game: Game) {
+    await app.stopGame(game.id)
+  }
+
   async function reveal(game: Game) {
-    if (!game.launcher) {
-      notify('Choose a launch target for this game first.')
+    if (!game.launch.entry) {
+      notify('Choose an entry point for this game first.')
       return
     }
     await app.revealGame(game.id)
@@ -183,7 +188,7 @@ export function LibraryScreen({ app, notify, onEdit }: LibraryScreenProps) {
           <button
             type="button"
             className="btn-primary btn-primary--compact"
-            onClick={importGames}
+            onClick={onImport}
             disabled={!app.bridge}
           >
             <PlusIcon size={16} />
@@ -199,7 +204,7 @@ export function LibraryScreen({ app, notify, onEdit }: LibraryScreenProps) {
           <button
             type="button"
             className="btn-primary"
-            onClick={importGames}
+            onClick={onImport}
             disabled={!app.bridge}
           >
             <PlusIcon size={16} />
@@ -217,6 +222,7 @@ export function LibraryScreen({ app, notify, onEdit }: LibraryScreenProps) {
               game={game}
               running={runningIds.includes(game.id)}
               onPlay={() => play(game)}
+              onStop={() => void stop(game)}
               onEdit={() => onEdit(game.id)}
               onReveal={() => reveal(game)}
               onRemove={async () => {

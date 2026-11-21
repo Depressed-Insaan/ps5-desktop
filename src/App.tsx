@@ -3,6 +3,7 @@ import { Sidebar } from '@/components/Sidebar'
 import { TopBar } from '@/components/TopBar'
 import { Toast } from '@/components/Toast'
 import { GameEditor } from '@/components/GameEditor'
+import { ImportDialog } from '@/components/ImportDialog'
 import { HomeScreen } from '@/screens/HomeScreen'
 import { LibraryScreen } from '@/screens/LibraryScreen'
 import { TrophiesScreen } from '@/screens/TrophiesScreen'
@@ -26,8 +27,10 @@ export default function App() {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null)
   const [storage, setStorage] = useState<StorageInfo | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const stageBody = useRef<HTMLDivElement | null>(null)
   const startApplied = useRef(false)
   const previousRunning = useRef<string[] | null>(null)
 
@@ -89,6 +92,11 @@ export default function App() {
     root.style.setProperty('--accent', app.settings.accent)
   }, [app.settings.theme, app.settings.accent])
 
+  // Each screen opens at its own top instead of inheriting the last scroll.
+  useEffect(() => {
+    stageBody.current?.scrollTo({ top: 0 })
+  }, [view])
+
   useEffect(() => {
     if (app.loading || startApplied.current) return
     startApplied.current = true
@@ -128,7 +136,7 @@ export default function App() {
       <Sidebar view={view} onNavigate={setView} appInfo={appInfo} />
       <div className="stage">
         <TopBar profile={app.profile} />
-        <div className="stage__body">
+        <div className="stage__body" ref={stageBody}>
           {view === 'home' ? (
             <HomeScreen
               app={app}
@@ -136,9 +144,15 @@ export default function App() {
               storage={storage}
               notify={notify}
               onEdit={setEditingId}
+              onImport={() => setImporting(true)}
             />
           ) : view === 'library' ? (
-            <LibraryScreen app={app} notify={notify} onEdit={setEditingId} />
+            <LibraryScreen
+              app={app}
+              notify={notify}
+              onEdit={setEditingId}
+              onImport={() => setImporting(true)}
+            />
           ) : view === 'trophies' ? (
             <TrophiesScreen app={app} notify={notify} />
           ) : (
@@ -146,6 +160,10 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {importing ? (
+        <ImportDialog app={app} notify={notify} onClose={() => setImporting(false)} />
+      ) : null}
 
       {editing ? (
         <GameEditor

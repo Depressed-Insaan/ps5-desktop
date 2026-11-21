@@ -17,9 +17,17 @@ interface HomeScreenProps {
   storage: StorageInfo | null
   notify: (message: string) => void
   onEdit: (id: string) => void
+  onImport: () => void
 }
 
-export function HomeScreen({ app, appInfo, storage, notify, onEdit }: HomeScreenProps) {
+export function HomeScreen({
+  app,
+  appInfo,
+  storage,
+  notify,
+  onEdit,
+  onImport,
+}: HomeScreenProps) {
   const { games, runningIds, profile } = app
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const onGridKeyDown = useDashboardNav()
@@ -49,27 +57,17 @@ export function HomeScreen({ app, appInfo, storage, notify, onEdit }: HomeScreen
     Boolean(selectedArt?.hero) &&
     !artGames.some((game) => game.id === selected.id)
 
-  async function importGames() {
-    const result = await app.importGames()
-    if (result.canceled) return
-    if (result.added === 0) {
-      notify('Those games are already in your library.')
-      return
-    }
-    notify(
-      result.added === 1
-        ? 'Added 1 game to your library.'
-        : `Added ${result.added} games to your library.`,
-    )
-  }
-
   async function play(game: Game) {
-    if (!game.launcher) {
+    if (!game.launch.entry) {
       onEdit(game.id)
       return
     }
     const result = await app.launchGame(game.id)
     if (!result.ok) notify(result.error ?? 'This game could not be started.')
+  }
+
+  async function stop(game: Game) {
+    await app.stopGame(game.id)
   }
 
   const usedPercent = storage?.available
@@ -185,7 +183,7 @@ export function HomeScreen({ app, appInfo, storage, notify, onEdit }: HomeScreen
                 <button
                   type="button"
                   className="btn-primary"
-                  onClick={importGames}
+                  onClick={onImport}
                   disabled={!app.bridge}
                 >
                   <PlusIcon size={16} />
@@ -248,7 +246,7 @@ export function HomeScreen({ app, appInfo, storage, notify, onEdit }: HomeScreen
             />
             {selected.installed
               ? 'Ready to play'
-              : selected.launcher
+              : selected.launch.entry
                 ? 'Not installed'
                 : 'Not set up'}
             {selected.genre ? <span className="hero__separator">·</span> : null}
@@ -268,15 +266,20 @@ export function HomeScreen({ app, appInfo, storage, notify, onEdit }: HomeScreen
             {selected.genre ? <span className="hero__accent">{selected.genre}</span> : null}
           </div>
           <div className="hero__actions">
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => play(selected)}
-              disabled={running}
-            >
-              <PlayIcon size={16} />
-              {running ? 'Playing' : selected.launcher ? 'Play' : 'Set up'}
-            </button>
+            {running ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void stop(selected)}
+              >
+                Stop
+              </button>
+            ) : (
+              <button type="button" className="btn-primary" onClick={() => play(selected)}>
+                <PlayIcon size={16} />
+                {selected.launch.entry ? 'Play' : 'Set up'}
+              </button>
+            )}
             <button type="button" className="btn-ghost" onClick={() => onEdit(selected.id)}>
               Edit
             </button>

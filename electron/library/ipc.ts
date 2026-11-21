@@ -4,10 +4,31 @@ import { copyFileSync, existsSync, mkdirSync } from 'node:fs'
 import { statfs, unlink } from 'node:fs/promises'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { parseArgs } from '../launch/args'
+import {
+  applyLaunchPatch,
+  isWatchMode,
+  launchProjection,
+  normaliseLaunch,
+} from '../launch/config'
+import { forgetGameRoot, GAME_SCHEME } from '../launch/html'
+import { inspectTargets, takeCandidate, titleFromPath } from '../launch/inspect'
+import { describeLaunch, runtimeExists } from '../launch/runtimes'
+import {
+  isRunning,
+  runningGameIds,
+  setSessionHandlers,
+  startSession,
+  stopSession,
+} from '../launch/session'
 import type {
   AppSnapshot,
   Game,
   GamePatch,
+  LaunchDraft,
+  LaunchPatch,
+  LaunchPreview,
+  LaunchResult,
   NewTrophy,
   ProfilePatch,
   Settings,
@@ -16,7 +37,6 @@ import type {
   TrophyPatch,
   TrophyTier,
 } from '../../src/types'
-import { launchGame, runningGameIds, setSessionEndHandler } from './launch'
 import {
   addGames,
   addPlaytime,
@@ -42,7 +62,7 @@ import type { NewGame, StoredGame } from './store'
 export const MEDIA_SCHEME = 'app-media'
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'avif']
-const GAME_EXTENSIONS = ['exe', 'bat', 'cmd', 'lnk']
+const GAME_EXTENSIONS = ['exe', 'bat', 'cmd', 'lnk', 'html', 'htm']
 const ACCENTS = ['#5aa9ff', '#ff8a5c', '#ff5aa8', '#ffa94d', '#7fe0a0', '#ffd166', '#4fd8ff', '#9b8cff']
 const TIERS: TrophyTier[] = ['bronze', 'silver', 'gold', 'platinum']
 const THEMES = ['midnight', 'aurora', 'ember']
@@ -53,10 +73,24 @@ export function registerMediaScheme() {
       scheme: MEDIA_SCHEME,
       privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
     },
+    {
+      // Each HTML game gets its own origin on this scheme, served out of its
+      // own folder. A real origin is what makes modules, fetch and storage work.
+      scheme: GAME_SCHEME,
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        stream: true,
+        corsEnabled: true,
+      },
+    },
   ])
 }
 
 function toGame(game: StoredGame): Game {
+  const description = describeLaunch(game.launch, game.id)
+
   return {
     id: game.id,
     title: game.title,
@@ -70,7 +104,14 @@ function toGame(game: StoredGame): Game {
       : null,
     launcher: game.launcher,
     launcherArgs: game.launcherArgs,
-    installed: game.launcher !== '' && existsSync(game.launcher),
+    launch: game.launch,
+    launchLabel: description.label,
+    launchCommand: description.command,
+    launchReady: description.ready,
+    launchWarning: description.warning,
+    requiresTrust: description.requiresTrust,
+    trusted: Boolean(game.launch.trustedAt),
+    installed: game.launch.entry !== '' && existsSync(game.launch.entry),
     playtimeMinutes: Math.round(game.playtimeSeconds / 60),
     lastPlayedAt: game.lastPlayedAt,
   }
@@ -102,34 +143,47 @@ function showOpenDialog(options: OpenDialogOptions) {
   return parent ? dialog.showOpenDialog(parent, options) : dialog.showOpenDialog(options)
 }
 
-function titleFromPath(file: string): string {
-  const name = path.basename(file, path.extname(file))
-  const cleaned = name.replace(/[._-]+/g, ' ').replace(/\s+/g, ' ').trim()
-  return cleaned || path.basename(file)
-}
-
 function accentFor(value: string): string {
   let hash = 0
   for (const character of value) hash = (hash * 31 + character.charCodeAt(0)) % 1009
   return ACCENTS[hash % ACCENTS.length]
 }
 
+/** Launch entries already in the library, lowercased for duplicate checks. */
+function knownEntries(): Set<string> {
+  return new Set(
+    listGames()
+      .map((game) => game.launch.entry.toLowerCase())
+      .filter((entry) => entry !== ''),
+  )
+}
+
 function entriesFor(files: string[]): { entries: NewGame[]; skipped: number } {
-  const known = new Set(listGames().map((game) => game.launcher.toLowerCase()))
+  const known = knownEntries()
   const entries: NewGame[] = []
 
   for (const file of files) {
     const key = file.toLowerCase()
     if (known.has(key)) continue
     known.add(key)
+
+    // A file picked through the old single-file flow is trusted immediately,
+    // because it was already playable before Phase 5.
+    const launch = normaliseLaunch(
+      { entry: file, trustedAt: Date.now() },
+      { entry: file, args: '', addedAt: Date.now() },
+    )
+    const projection = launchProjection(launch)
+
     entries.push({
       title: titleFromPath(file),
       tagline: '',
       genre: '',
       accent: accentFor(file),
       favorite: false,
-      launcher: file,
-      launcherArgs: '',
+      launcher: projection.launcher,
+      launcherArgs: projection.launcherArgs,
+      launch,
       artworkKey: null,
       artworkFile: null,
       playtimeSeconds: 0,
@@ -219,6 +273,54 @@ function readProfilePatch(raw: unknown): ProfilePatch {
   return patch
 }
 
+/** Every field of an incoming launch edit is validated on its own. */
+function readLaunchPatch(raw: unknown): LaunchPatch {
+  if (!raw || typeof raw !== 'object') return {}
+  const input = raw as Record<string, unknown>
+  const patch: LaunchPatch = {}
+
+  if (typeof input.runtime === 'string') patch.runtime = input.runtime.slice(0, 40)
+  if (typeof input.root === 'string') patch.root = input.root.slice(0, 4096)
+  if (typeof input.entry === 'string') patch.entry = input.entry.slice(0, 4096)
+  if (typeof input.cwd === 'string') patch.cwd = input.cwd.slice(0, 4096)
+  if (typeof input.argsText === 'string') patch.argsText = input.argsText.slice(0, 2000)
+  if (Array.isArray(input.args)) {
+    patch.args = input.args
+      .filter((value): value is string => typeof value === 'string')
+      .slice(0, 100)
+      .map((value) => value.slice(0, 1024))
+  }
+  if (isWatchMode(input.watch)) patch.watch = input.watch
+  if (typeof input.trust === 'boolean') patch.trust = input.trust
+
+  return patch
+}
+
+const EMPTY_PREVIEW: LaunchPreview = {
+  runtime: 'native',
+  label: 'Not set up',
+  command: '',
+  cwd: '',
+  watch: 'process',
+  ready: false,
+  requiresTrust: false,
+  warning: null,
+}
+
+function readLaunchDraft(raw: unknown): LaunchDraft | null {
+  if (!raw || typeof raw !== 'object') return null
+  const input = raw as Record<string, unknown>
+  if (typeof input.entry !== 'string') return null
+
+  return {
+    runtime: typeof input.runtime === 'string' ? input.runtime : undefined,
+    entry: input.entry.slice(0, 4096),
+    cwd: typeof input.cwd === 'string' ? input.cwd.slice(0, 4096) : undefined,
+    argsText: typeof input.argsText === 'string' ? input.argsText.slice(0, 2000) : undefined,
+    watch: isWatchMode(input.watch) ? input.watch : undefined,
+  }
+}
+
 async function readStorage(): Promise<StorageInfo> {
   const drive = process.platform === 'win32' ? path.parse(app.getPath('home')).root : '/'
 
@@ -243,9 +345,9 @@ async function readStorage(): Promise<StorageInfo> {
 }
 
 export function registerLibraryIpc() {
-  setSessionEndHandler((gameId, seconds, endedAt) => {
-    addPlaytime(gameId, seconds, endedAt)
-    broadcast()
+  setSessionHandlers({
+    credit: (gameId, seconds, endedAt) => addPlaytime(gameId, seconds, endedAt),
+    closed: () => broadcast(),
   })
 
   protocol.handle(MEDIA_SCHEME, (request) => {
@@ -292,6 +394,139 @@ export function registerLibraryIpc() {
     return result.canceled ? null : (result.filePaths[0] ?? null)
   })
 
+  ipcMain.handle('library:pick-target', async (_event, kind: unknown) => {
+    const folder = kind === 'folder'
+
+    const result = await showOpenDialog({
+      title: folder ? 'Choose a game folder' : 'Choose game files',
+      buttonLabel: folder ? 'Choose folder' : 'Choose',
+      properties: folder ? ['openDirectory', 'multiSelections'] : ['openFile', 'multiSelections'],
+      filters: folder
+        ? undefined
+        : [
+            { name: 'Games', extensions: GAME_EXTENSIONS },
+            { name: 'All files', extensions: ['*'] },
+          ],
+    })
+
+    return result.canceled ? [] : result.filePaths
+  })
+
+  ipcMain.handle('library:inspect', (_event, targets: unknown) => {
+    if (!Array.isArray(targets)) return []
+
+    const paths = targets
+      .filter((value): value is string => typeof value === 'string' && path.isAbsolute(value))
+      .slice(0, 50)
+
+    return inspectTargets(paths, knownEntries())
+  })
+
+  ipcMain.handle('library:import-candidates', (_event, selection: unknown) => {
+    if (!Array.isArray(selection)) return { added: 0, skipped: 0, canceled: false }
+
+    const known = knownEntries()
+    const entries: NewGame[] = []
+    let skipped = 0
+
+    for (const raw of selection.slice(0, 50)) {
+      if (!raw || typeof raw !== 'object') {
+        skipped += 1
+        continue
+      }
+
+      const input = raw as Record<string, unknown>
+      if (typeof input.token !== 'string') {
+        skipped += 1
+        continue
+      }
+
+      // The plan behind a token came from the main process; the renderer only
+      // says which candidate to keep and whether it was trusted.
+      const record = takeCandidate(input.token)
+      if (!record || !record.importable) {
+        skipped += 1
+        continue
+      }
+
+      const key = record.launch.entry.toLowerCase()
+      if (!key || known.has(key)) {
+        skipped += 1
+        continue
+      }
+      known.add(key)
+
+      const launch =
+        input.trusted === true ? { ...record.launch, trustedAt: Date.now() } : record.launch
+      const projection = launchProjection(launch)
+
+      entries.push({
+        title: record.title.slice(0, 120) || titleFromPath(record.source),
+        tagline: '',
+        genre: '',
+        accent: accentFor(record.source),
+        favorite: false,
+        launcher: projection.launcher,
+        launcherArgs: projection.launcherArgs,
+        launch,
+        artworkKey: null,
+        artworkFile: null,
+        playtimeSeconds: 0,
+        lastPlayedAt: null,
+      })
+    }
+
+    const added = addGames(entries)
+    if (added.length > 0) broadcast()
+    return { added: added.length, skipped, canceled: false }
+  })
+
+  ipcMain.handle('launch:preview', (_event, id: unknown, raw: unknown) => {
+    const draft = readLaunchDraft(raw)
+    if (!draft) return EMPTY_PREVIEW
+
+    /*
+     * The preview is built through exactly the same normalisation and planning
+     * code a real launch uses, so what is shown is what would run.
+     */
+    const config = normaliseLaunch(
+      {
+        runtime: draft.runtime,
+        entry: draft.entry,
+        cwd: draft.cwd,
+        args: parseArgs(draft.argsText ?? ''),
+        watch: draft.watch,
+      },
+      { entry: draft.entry, args: '', addedAt: Date.now() },
+    )
+
+    const description = describeLaunch(config, typeof id === 'string' ? id : undefined)
+
+    return {
+      runtime: description.runtime,
+      label: description.label,
+      command: description.command,
+      cwd: config.cwd,
+      watch: description.watch,
+      ready: description.ready,
+      requiresTrust: description.requiresTrust,
+      warning: description.warning,
+    }
+  })
+
+  ipcMain.handle('library:update-launch', (_event, id: unknown, patch: unknown) => {
+    if (typeof id !== 'string') return snapshot()
+
+    const game = getGame(id)
+    if (game) {
+      const next = applyLaunchPatch(game.launch, readLaunchPatch(patch), runtimeExists)
+      updateGame(id, { launch: next })
+      broadcast()
+    }
+
+    return snapshot()
+  })
+
   ipcMain.handle('library:update', (_event, id: unknown, patch: unknown) => {
     if (typeof id !== 'string' || !patch || typeof patch !== 'object') return snapshot()
 
@@ -315,8 +550,11 @@ export function registerLibraryIpc() {
   ipcMain.handle('library:remove', async (_event, id: unknown) => {
     if (typeof id === 'string') {
       const removed = removeGame(id)
-      if (removed?.artworkFile) await removeMediaFile(removed.artworkFile)
-      if (removed) broadcast()
+      if (removed) {
+        forgetGameRoot(id)
+        if (removed.artworkFile) await removeMediaFile(removed.artworkFile)
+        broadcast()
+      }
     }
     return snapshot()
   })
@@ -359,20 +597,29 @@ export function registerLibraryIpc() {
     return snapshot()
   })
 
-  ipcMain.handle('library:launch', async (_event, id: unknown) => {
+  ipcMain.handle('library:launch', async (_event, id: unknown): Promise<LaunchResult> => {
     if (typeof id !== 'string') return { ok: false, error: 'That game is no longer in your library.' }
     const game = getGame(id)
     if (!game) return { ok: false, error: 'That game is no longer in your library.' }
 
-    const outcome = await launchGame(game)
+    const outcome = await startSession(game)
     broadcast()
     return outcome
+  })
+
+  ipcMain.handle('library:stop', async (_event, id: unknown) => {
+    if (typeof id === 'string' && isRunning(id)) {
+      await stopSession(id)
+      broadcast()
+    }
+    return snapshot()
   })
 
   ipcMain.handle('library:reveal', (_event, id: unknown) => {
     if (typeof id !== 'string') return
     const game = getGame(id)
-    if (game?.launcher && existsSync(game.launcher)) shell.showItemInFolder(game.launcher)
+    const target = game?.launch.entry || game?.launcher
+    if (target && existsSync(target)) shell.showItemInFolder(target)
   })
 
   ipcMain.handle('settings:update', (_event, patch: unknown) => {
